@@ -1,0 +1,6 @@
+[master]
+pi@rpi-cluster-one
+
+[nodes]
+pi@rpi-cluster-two
+pi@rpi-cluster-three
