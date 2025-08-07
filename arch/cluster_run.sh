@@ -2,22 +2,23 @@
 set -e
 
 # === USAGE CHECK ===
-if [ $# -ne 3 ]; then
-  echo "Usage: $0 <host_file> <source_file.c> <binary_name>"
-  echo "Example: $0 cluster/cluster_hosts.txt src/hello.c hello"
+if [ $# -ne 4 ]; then
+  echo "Usage: $0 <host_file> <source_file.c> <binary_name> <core_num>"
+  echo "Example: $0 cluster/cluster_hosts.txt src/hello.c hello 12"
   exit 1
 fi
 
 # === INPUT PARAMETERS ===
-HOSTS_FILE="$1"         # e.g., cluster/cluster_hosts.txt
-SCRIPT_FILE="$2"        # e.g., src/hello.c
-SCRIPT_NAME="$3"        # e.g., hello
+HOSTS_FILE="$1"         
+SCRIPT_FILE="$2"        
+SCRIPT_NAME="$3"        
+CORE_NUM=$4
+
 
 # === CONFIGURATION ===
 NFS_DIR="nfs_shared"    # Folder shared via NFS, under remote ~
 WORK_DIR="~"            # Remote working directory
 MPI_HOSTFILE="mpi_hostfile"  # Hostfile path under NFS_DIR
-CORE_NUM=12
 
 # === PARSE MASTER AND NODES ===
 readarray -t MASTER < <(awk '/\[master\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
