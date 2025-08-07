@@ -24,9 +24,9 @@ run_script() {
   echo "[INFO] Eseguo $action su $node..."
 
   if [ "$action" = "setup" ]; then
-    ssh -t $node "bash $WORK_DIR/$SETUP_FILE $role"
+    ssh -t $node "bash $WORK_DIR/$SETUP_FILE $role $WORK_DIR"
   elif [ "$action" = "rollback" ]; then
-    ssh -t $node "bash $WORK_DIR/$ROLLBACK_FILE $role"
+    ssh -t $node "bash $WORK_DIR/$ROLLBACK_FILE $role $WORK_DIR"
   else
     echo "[ERROR] Azione non eseguibile"
   fi 

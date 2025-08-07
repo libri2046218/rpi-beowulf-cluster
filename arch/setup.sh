@@ -11,12 +11,13 @@ readarray -t NODES < <(awk '/\[nodes\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
 MPI_HOSTFILE="mpi_hostfile"
 NFS_DIR="nfs_shared"
 NFS_MOUNT="nfs_shared"
+WORK_DIR=$2
 
 # Funzione per aggiornare e installare pacchetti
 install_dependencies() {
   echo "[INFO] Aggiorno sistema e installo pacchetti..."
   sudo apt update && sudo apt upgrade -y
-  sudo apt install -y openmpi-bin openmpi-common libopenmpi-dev nfs-common
+  sudo apt install -y nfs-common openmpi-bin openmpi-common libopenmpi-dev
 }
 
 # Funzione per generare coppia di chiavi SSH senza passphrase
@@ -56,7 +57,7 @@ setup_nfs_server() {
   sudo chmod 777 $NFS_DIR  # puoi adattare i permessi
 
   # Aggiungo l'export NFS se non già presente
-  EXPORT_LINE="$NFS_DIR *(rw,sync,no_subtree_check,no_root_squash)"
+  EXPORT_LINE="$(realpath $WORK_DIR/$NFS_DIR) *(rw,sync,no_subtree_check,no_root_squash)"
   if ! grep -qF "$EXPORT_LINE" /etc/exports; then
     echo "$EXPORT_LINE" | sudo tee -a /etc/exports
   fi
@@ -72,11 +73,11 @@ setup_nfs_client() {
   sudo apt install -y nfs-common
 
   # Creo punto di mount
-  sudo mkdir -p $NFS_MOUNT
+  sudo mkdir -p $(realpath $WORK_DIR/$NFS_MOUNT)
 
   # Verifico se la condivisione è già montata
-  if ! mountpoint -q $NFS_MOUNT; then
-    sudo mount -t nfs rpi-cluster-one:$NFS_DIR $NFS_MOUNT
+  if ! mountpoint -q $(realpath $WORK_DIR/$NFS_MOUNT); then
+    sudo mount -t nfs "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" "$(realpath $WORK_DIR/$NFS_MOUNT)" #monto il filesystem
   else
     echo "[INFO] NFS già montato in $NFS_MOUNT"
   fi

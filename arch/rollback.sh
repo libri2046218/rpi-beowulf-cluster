@@ -11,6 +11,8 @@ readarray -t NODES < <(awk '/\[nodes\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
 MPI_HOSTFILE="mpi_hostfile"
 NFS_DIR="nfs_shared"
 NFS_MOUNT="nfs_shared"
+WORK_DIR=$2
+
 
 # Rimuove i pacchetti installati (MPI e NFS)
 remove_dependencies() {
@@ -59,15 +61,15 @@ remove_nfs_server() {
   echo "[INFO] Rimuovo configurazione server NFS..."
 
   # Rimuove export da /etc/exports
-  EXPORT_LINE="$NFS_DIR *(rw,sync,no_subtree_check,no_root_squash)"
+  EXPORT_LINE="$(realpath $WORK_DIR/$NFS_DIR) *(rw,sync,no_subtree_check,no_root_squash)"
   sudo sed -i "\|$EXPORT_LINE|d" /etc/exports
 
   sudo exportfs -ra
   sudo systemctl restart nfs-kernel-server
 
   # Rimuove directory condivisa
-  sudo umount -f "$NFS_DIR" 2>/dev/null || true
-  sudo rm -rf "$NFS_DIR"
+  sudo umount -f "$(realpath $WORK_DIR/$NFS_DIR)" 2>/dev/null || true
+  sudo rm -rf "$(realpath $WORK_DIR/$NFS_DIR)"
 
   # Rimuove pacchetto
   sudo apt purge -y nfs-kernel-server
@@ -78,11 +80,11 @@ remove_nfs_client() {
   echo "[INFO] Rimuovo configurazione client NFS..."
 
   # Smonta se montato
-  if mountpoint -q $NFS_MOUNT; then
-    sudo umount $NFS_MOUNT
+  if mountpoint -q $(realpath $WORK_DIR/$NFS_MOUNT); then
+    sudo umount $(realpath $WORK_DIR/$NFS_MOUNT)
   fi
 
-  sudo rm -rf $NFS_MOUNT
+  sudo rm -rf $(realpath $WORK_DIR/$NFS_MOUNT)
   sudo apt purge -y nfs-common
 }
 
