@@ -42,7 +42,7 @@ copy_ssh_key_to_nodes() {
 create_mpi_hostfile() {
   echo "[INFO] Creo hostfile MPI in $MPI_HOSTFILE ..."
   printf "%s\n" "${MASTER[@]}" > $MPI_HOSTFILE
-  printf "%s\n" "${NODES[@]}" > $MPI_HOSTFILE
+  printf "%s\n" "${NODES[@]}" >> $MPI_HOSTFILE
   chown $USER:$USER $MPI_HOSTFILE
 }
 
