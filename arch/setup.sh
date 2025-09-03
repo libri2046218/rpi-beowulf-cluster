@@ -78,6 +78,24 @@ setup_nfs_client() {
   # Verifico se la condivisione è già montata
   if ! mountpoint -q $(realpath $WORK_DIR/$NFS_MOUNT); then
     sudo mount -t nfs "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" "$(realpath $WORK_DIR/$NFS_MOUNT)" #monto il filesystem
+    
+    #Persistenza del file system dopo i reboot
+
+    # Riga da inserire in /etc/fstab
+    FSTAB_ENTRY="rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)   $(realpath $WORK_DIR/$NFS_MOUNT)   nfs   rw,_netdev,noatime,x-systemd.automount,x-systemd.idle-timeout=60   0  0"
+
+    # Controlla se la riga esiste già
+    if ! grep -q "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" /etc/fstab; then
+        echo "Aggiungo mount persistente in /etc/fstab..."
+        echo "$FSTAB_ENTRY" | sudo tee -a /etc/fstab
+    else
+        echo "Entry già presente in /etc/fstab, nessuna modifica."
+    fi
+
+    # Ricarica fstab
+    sudo systemctl daemon-reload
+    sudo systemctl restart remote-fs.target || sudo mount -a
+    
   else
     echo "[INFO] NFS già montato in $NFS_MOUNT"
   fi

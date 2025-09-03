@@ -82,6 +82,21 @@ remove_nfs_client() {
   # Smonta se montato
   if mountpoint -q $(realpath $WORK_DIR/$NFS_MOUNT); then
     sudo umount $(realpath $WORK_DIR/$NFS_MOUNT)
+
+    #Rimuovo persistenza del file system
+
+    # Rimuove la riga corrispondente da /etc/fstab
+    if grep -q "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" /etc/fstab; then
+        echo "Rimuovo mount persistente da /etc/fstab..."
+        sudo sed -i "\|rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)|d" /etc/fstab
+    else
+        echo "Nessuna entry trovata per rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR) in /etc/fstab"
+    fi
+
+    # Ricarica fstab
+    sudo systemctl daemon-reload
+    sudo systemctl restart remote-fs.target || sudo mount -a
+
   fi
 
   sudo rm -rf $(realpath $WORK_DIR/$NFS_MOUNT)
