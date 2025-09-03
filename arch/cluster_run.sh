@@ -64,10 +64,10 @@ run_script() {
   echo "[INFO] Running binary on cluster using $MPI_HOSTFILE..."
 
   if [ "$CORE_MODE" = "ALL" ]; then
-    ssh "$MASTER" "mpirun -np $(($NUM_NODES * $NUM_CORES_PER_NODE)) --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
+    ssh "$MASTER" "mpirun -tag-output -np $(($NUM_NODES * $NUM_CORES_PER_NODE)) --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
   
   elif [ "$CORE_MODE" = "ONE" ]; then
-    ssh "$MASTER" "mpirun -np $NUM_NODES --map-by ppr:1:node --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
+    ssh "$MASTER" "mpirun -tag-output -np $NUM_NODES --map-by ppr:1:node --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
   
   else
       echo "==> Lancio su $CORE_MODE core" #TODO
