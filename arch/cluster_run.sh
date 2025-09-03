@@ -3,8 +3,7 @@ set -e
 
 # === USAGE CHECK ===
 if [ $# -ne 4 ]; then
-  echo "Usage: $0 <host_file> <source_file.c> <binary_name> <core_num>"
-  echo "Example: $0 cluster/cluster_hosts.txt src/hello.c hello 12"
+  echo "Usage: $0 <host_file> <source_file.c> <binary_name> [--all-cores | --one-core | --num-core <n>]"
   exit 1
 fi
 
@@ -12,13 +11,35 @@ fi
 HOSTS_FILE="$1"         
 SCRIPT_FILE="$2"        
 SCRIPT_NAME="$3"        
-CORE_NUM=$4
 
+
+case "$4" in
+    --all-cores)
+        CORE_MODE="ALL"
+        ;;
+    --one-core)
+        CORE_MODE="ONE"
+        ;;
+    --num-core)
+        if [ -z "$5" ]; then
+            echo "Errore: devi specificare un numero dopo --num-core"
+            exit 1
+        fi
+        CORE_MODE="$5"
+        shift
+        ;;
+    *)
+        echo "Errore: opzione non valida $4"
+        exit 1
+        ;;
+esac
 
 # === CONFIGURATION ===
 NFS_DIR="nfs_shared"    # Folder shared via NFS, under remote ~
 WORK_DIR="~"            # Remote working directory
 MPI_HOSTFILE="mpi_hostfile"  # Hostfile path under NFS_DIR
+NUM_NODES=3             #Number of nodes 
+NUM_CORES_PER_NODE=4    #Number of core per nodes
 
 # === PARSE MASTER AND NODES ===
 readarray -t MASTER < <(awk '/\[master\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
@@ -41,7 +62,19 @@ compile_script() {
 
 run_script() {
   echo "[INFO] Running binary on cluster using $MPI_HOSTFILE..."
-  ssh "$MASTER" "mpirun -np $CORE_NUM --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
+
+  if [ "$CORE_MODE" = "ALL" ]; then
+    ssh "$MASTER" "mpirun -np $(($NUM_NODES * $NUM_CORES_PER_NODE)) --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
+  
+  elif [ "$CORE_MODE" = "ONE" ]; then
+    ssh "$MASTER" "mpirun -np $NUM_NODES --map-by ppr:1:node --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
+  
+  else
+      echo "==> Lancio su $CORE_MODE core" #TODO
+      echo "Non ancora implementato"
+  fi
+  
+  
 }
 
 # === RUN ===
