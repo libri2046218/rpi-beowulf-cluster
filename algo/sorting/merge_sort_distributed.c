@@ -4,6 +4,8 @@
 #include "merge_sort.h"
 #include "array.h"
 
+#define TIMING 1
+
 // Funzione wrapper per leggere l'array da ordinare
 // in questo caso l'array viene generato casualmente a tempo di esecuzione
 void read_input(int* out, int n) {
@@ -29,6 +31,11 @@ int main(int argc, char* argv[]) {
         arr = (int*)malloc(n * sizeof(int));
         read_input(arr, n);
     }
+
+    // Qui incomincia la procedura di sorting, si inizia a prendere il tempo
+    double start, finish;
+    MPI_Barrier(MPI_COMM_WORLD); // Sincronizzo i processi
+    start = MPI_Wtime();
 
     // Distribuzione equa del carico
     int local_n[comm_sz];
@@ -62,7 +69,6 @@ int main(int argc, char* argv[]) {
         free(arr);
     }
 
-    
     //printf("Process %d: ", my_rank);
     //array_print(local_arr, local_n[my_rank]);
 
@@ -135,6 +141,13 @@ int main(int argc, char* argv[]) {
         MPI_Comm_rank(new_comm, &new_rank);
         MPI_Comm_size(new_comm, &new_comm_sz);
     }
+
+    // Qui finisce la procedura di sorting, si finisce di prendere il tempo
+    finish = MPI_Wtime();
+
+    double elapsed = finish - start;
+
+    if(my_rank == 0) printf("Elapsed time: %f \n", elapsed);
 
     // L'ultimo processo verifica la correttezza
     if (new_rank == 0) {
