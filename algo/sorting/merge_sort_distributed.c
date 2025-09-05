@@ -4,8 +4,6 @@
 #include "merge_sort.h"
 #include "array.h"
 
-#define TIMING 1
-
 // Funzione wrapper per leggere l'array da ordinare
 // in questo caso l'array viene generato casualmente a tempo di esecuzione
 void read_input(int* out, int n) {
