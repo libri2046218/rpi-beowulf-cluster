@@ -48,3 +48,14 @@ void array_reduce(int* arr, int n) {
         }
     }
 }
+
+/*
+returns 0 if the array is not sorted
+return 1 if it is sorted
+*/
+int array_check_sorting(int*arr, int n) {
+    for (int i = 1; i < n; i++){
+        if (arr[i] < arr [i - 1]) return 0;
+    }
+    return 1;
+}
