@@ -2,37 +2,48 @@
 set -e
 
 # === USAGE CHECK ===
-if [ $# -ne 4 ]; then
-  echo "Usage: $0 <host_file> <source_file.c> <binary_name> [--all-cores | --one-core | --num-core <n>]"
+if [ $# -lt 4 ]; then
+  echo "Usage: $0 <host_file> <binary_name> <source_files ...> [--all-cores | --one-core ] -- [args for <binary_name>]"
   exit 1
 fi
 
 # === INPUT PARAMETERS ===
 HOSTS_FILE="$1"         
-SCRIPT_FILE="$2"        
-SCRIPT_NAME="$3"        
+SCRIPT_NAME="$2" 
+shift 2
 
+SOURCES=()
 
-case "$4" in
+while [[ "$1" != --* && $# -gt 0 ]]; do
+  SOURCES+=("$1")
+  shift
+done
+
+OPTION="$1"
+
+shift
+
+case "$OPTION" in
     --all-cores)
         CORE_MODE="ALL"
         ;;
     --one-core)
         CORE_MODE="ONE"
         ;;
-    --num-core)
-        if [ -z "$5" ]; then
-            echo "Errore: devi specificare un numero dopo --num-core"
-            exit 1
-        fi
-        CORE_MODE="$5"
-        shift
-        ;;
     *)
         echo "Errore: opzione non valida $4"
         exit 1
         ;;
 esac
+
+PROGRAM_ARGS=()
+
+if [[ "$1" == "--" ]]; then
+  shift
+  for arg in "$@"; do
+    PROGRAM_ARGS+=("$arg")
+  done
+fi
 
 # === CONFIGURATION ===
 NFS_DIR="nfs_shared"    # Folder shared via NFS, under remote ~
@@ -46,35 +57,40 @@ readarray -t MASTER < <(awk '/\[master\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
 readarray -t NODES < <(awk '/\[nodes\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
 
 REMOTE_NFS_PATH="$WORK_DIR/$NFS_DIR"
-SCRIPT_BASENAME=$(basename "$SCRIPT_FILE")  # just filename from path
+BASENAMES=()
+for file in "${SOURCES[@]}"; do
+  BASENAME=$(basename "$file")
+  BASENAMES+=("$BASENAME")
+done
+
+C_FILES=()
+for file in "${BASENAMES[@]}"; do
+  if [[ $file == *.c ]]; then
+    C_FILES+=("$file")
+  fi
+done
 
 # === FUNCTIONS ===
 
 copy_script() {
   echo "[INFO] Copying $SCRIPT_FILE to $MASTER..."
-  scp "$SCRIPT_FILE" "$MASTER:$REMOTE_NFS_PATH/$SCRIPT_BASENAME"
+  scp "${SOURCES[@]}" "$MASTER:$REMOTE_NFS_PATH/"  
 }
 
 compile_script() {
   echo "[INFO] Compiling with mpicc on $MASTER..."
-  ssh "$MASTER" "mpicc -o $REMOTE_NFS_PATH/$SCRIPT_NAME $REMOTE_NFS_PATH/$SCRIPT_BASENAME"
+  ssh "$MASTER" "cd $REMOTE_NFS_PATH && mpicc -o $SCRIPT_NAME ${C_FILES[@]}"
 }
 
 run_script() {
   echo "[INFO] Running binary on cluster using $MPI_HOSTFILE..."
 
   if [ "$CORE_MODE" = "ALL" ]; then
-    ssh "$MASTER" "mpirun -tag-output -np $(($NUM_NODES * $NUM_CORES_PER_NODE)) --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
+    ssh "$MASTER" "mpirun -tag-output -np $(($NUM_NODES * $NUM_CORES_PER_NODE)) --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME ${PROGRAM_ARGS[@]} " 
   
   elif [ "$CORE_MODE" = "ONE" ]; then
-    ssh "$MASTER" "mpirun -tag-output -np $NUM_NODES --map-by ppr:1:node --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME"
-  
-  else
-      echo "==> Lancio su $CORE_MODE core" #TODO
-      echo "Non ancora implementato"
+    ssh "$MASTER" "mpirun -tag-output -np $NUM_NODES --map-by ppr:1:node --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_NFS_PATH/$SCRIPT_NAME ${PROGRAM_ARGS[@]} "
   fi
-  
-  
 }
 
 # === RUN ===
