@@ -4,30 +4,10 @@
 #include "merge_sort.h"
 #include "array.h"
 
-void read_vector(
-    int* local_arr,
-    int* local_n,
-    int* displs,
-    int n,
-    int my_rank,
-    MPI_Comm comm){
-
-        int* arr = NULL;
-
-        if (my_rank == 0) {
-            arr = malloc(n*sizeof(int));
-
-            // Genera un array
-            array_random(arr, n);
-
-            //array_print(arr, n);
-
-            MPI_Scatterv(arr, local_n, displs, MPI_INT, local_arr, local_n[my_rank], MPI_INT, 0, comm);
-            free(arr);
-        } else {
-            MPI_Scatterv(arr, local_n, displs, MPI_INT, local_arr, local_n[my_rank], MPI_INT, 0, comm);
-        }
-
+// Funzione wrapper per leggere l'array da ordinare
+// in questo caso l'array viene generato casualmente a tempo di esecuzione
+void read_input(int* out, int n) {
+    array_random(out, n);
 }
 
 int main(int argc, char* argv[]) {
@@ -41,6 +21,14 @@ int main(int argc, char* argv[]) {
     MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+    int* arr = NULL;
+
+    // Il processo 0 alloca memoria e legge un array di lunghezza n
+    if (my_rank == 0) {
+        arr = (int*)malloc(n * sizeof(int));
+        read_input(arr, n);
+    }
 
     // Distribuzione equa del carico
     int local_n[comm_sz];
@@ -64,9 +52,15 @@ int main(int argc, char* argv[]) {
     // Allocazione di memoria dinamica per il vettore locale da ordinare
     int* local_arr = (int*)malloc(local_n[my_rank] * sizeof(int));
 
-    // Il process con rank 0 genera un vettore casuale di lunghezza n e lo invia agli altri processi
-    // Gli altri processi ricevono dal processo 0 una parte del vettore originale e lo salvano in locale
-    read_vector(local_arr, local_n, displs, n, my_rank, MPI_COMM_WORLD);
+    // Il processo 0 invia il vettore agli altri processi che ricevono solo una parte del vettore originale
+    // con numero di elementi definito da local_n
+    MPI_Scatterv(arr, local_n, displs, MPI_INT, local_arr, local_n[my_rank], MPI_INT, 0, MPI_COMM_WORLD);
+
+
+    // Il processo 0 libera la memoria del vettore di input
+    if(my_rank == 0) {
+        free(arr);
+    }
 
     
     //printf("Process %d: ", my_rank);
