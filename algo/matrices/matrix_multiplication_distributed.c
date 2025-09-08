@@ -34,9 +34,14 @@ int main(int argc, char* argv[]){
         B = matrix_alloc(n);
         read_input(B);
 
-        matrix_print(A);
-        matrix_print(B);
+        //matrix_print(A);
+        //matrix_print(B);
     }
+
+    // Qui incomincia la procedura, si inizia a prendere il tempo
+    double start, finish;
+    MPI_Barrier(MPI_COMM_WORLD); // Sincronizzo i processi
+    start = MPI_Wtime();
 
     // Distribuzione equa del carico
     int local_n[comm_sz];
@@ -112,7 +117,14 @@ int main(int argc, char* argv[]){
     if(my_rank == 0) MPI_Reduce(sub_C->M, C->M, n * n, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     else MPI_Reduce(sub_C->M, NULL, n * n, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if(my_rank == 0) matrix_print(C);
+    // Qui finisce la procedura, si finisce di prendere il tempo
+    finish = MPI_Wtime();
+
+    //if(my_rank == 0) matrix_print(C);
+
+    double elapsed = finish - start;
+
+    if(my_rank == 0) printf("Elapsed time: %f \n", elapsed);
     
     MPI_Finalize();
     if(my_rank == 0) {
