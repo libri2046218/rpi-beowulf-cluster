@@ -22,6 +22,17 @@ int main(int argc, char* argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
+    /**
+    // Ottieni il nome del processore
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+
+    // Stampa messaggio da ogni processo
+    printf("Hello from processor %s, rank %d out of %d processors\n",
+           processor_name, my_rank, comm_sz);
+    */
+
     int* arr = NULL;
 
     // Il processo 0 alloca memoria e legge un array di lunghezza n
