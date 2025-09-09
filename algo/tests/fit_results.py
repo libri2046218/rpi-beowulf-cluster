@@ -25,6 +25,7 @@ models = {
     "lineare": (lambda x, a, b: a*x + b, [1, 1]),
     "quadratico": (lambda x, a, b, c: a*x**2 + b*x + c, [1e-6, 1e-3, 1]),
     "logaritmico": (lambda x, a, b: a*np.log(x) + b, [1, 1]),
+    "nlogn": (lambda x, a, b: a * x * np.log(x) + b, [1e-6, 1]),
     "esponenziale": (lambda x, a, b: a*np.exp(b*x), [1e-6, 1e-3]),
     "potenza": (lambda x, a, b: a * np.power(x, b), [1e-6, 2]),
 }
