@@ -1,26 +1,19 @@
 #!/bin/bash
 set -e
 
-# Lista nodi (modifica se serve)
+source cluster.env # Include le variabili salvate nel file di configurazione
+
+# Utente che esegue lo script
 USER=$(whoami)
-HOSTS_FILE="cluster_hosts.txt"
 
-readarray -t MASTER < <(awk '/\[master\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
-readarray -t NODES < <(awk '/\[nodes\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
-
-MPI_HOSTFILE="mpi_hostfile"
-NFS_DIR="nfs_shared"
-NFS_MOUNT="nfs_shared"
-WORK_DIR=$2
-
-# Funzione per aggiornare e installare pacchetti
+# Installa i pacchetti necessari
 install_dependencies() {
   echo "[INFO] Aggiorno sistema e installo pacchetti..."
   sudo apt update && sudo apt upgrade -y
   sudo apt install -y nfs-common openmpi-bin openmpi-common libopenmpi-dev
 }
 
-# Funzione per generare coppia di chiavi SSH senza passphrase
+# Genera coppia di chiavi SSH senza passphrase
 generate_ssh_keys() {
   if [ ! -f .ssh/id_rsa ]; then
     echo "[INFO] Genero chiavi SSH..."
@@ -30,7 +23,7 @@ generate_ssh_keys() {
   fi
 }
 
-# Funzione per copiare chiave pubblica del master sugli altri nodi
+# Copia la chiave pubblica del master sugli altri nodi
 copy_ssh_key_to_nodes() {
   echo "[INFO] Copio chiave pubblica SSH sugli altri nodi..."
   for node in "${NODES[@]}"; do
@@ -38,7 +31,7 @@ copy_ssh_key_to_nodes() {
   done
 }
 
-# Funzione per creare file hostfile MPI
+# Crea il file MPI_HOSTFILE necessario per distribuire il carico con mpirun
 create_mpi_hostfile() {
   echo "[INFO] Creo hostfile MPI in $MPI_HOSTFILE ..."
   printf "%s\n" "${MASTER[@]}" > $MPI_HOSTFILE
@@ -46,43 +39,41 @@ create_mpi_hostfile() {
   chown $USER:$USER $MPI_HOSTFILE
 }
 
-# Configurazione server NFS (solo master)
+# Configura server NFS (solo master)
 setup_nfs_server() {
   echo "[INFO] Configuro server NFS..."
   sudo apt install -y nfs-kernel-server
 
-  # Creo directory da condividere se non esiste
+  # Crea directory da condividere se non esiste
   sudo mkdir -p $NFS_DIR
   sudo chown $USER:$USER $NFS_DIR
   sudo chmod 777 $NFS_DIR  # puoi adattare i permessi
 
-  # Aggiungo l'export NFS se non già presente
+  # Aggiunge l'export NFS se non già presente
   EXPORT_LINE="$(realpath $WORK_DIR/$NFS_DIR) *(rw,sync,no_subtree_check,no_root_squash)"
   if ! grep -qF "$EXPORT_LINE" /etc/exports; then
     echo "$EXPORT_LINE" | sudo tee -a /etc/exports
   fi
 
-  # Riavvio il servizio NFS
+  # Riavvia il servizio NFS
   sudo exportfs -ra
   sudo systemctl restart nfs-kernel-server
 }
 
-# Configurazione client NFS (master e nodi)
+# Configura client NFS (master e nodi)
 setup_nfs_client() {
   echo "[INFO] Configuro client NFS..."
   sudo apt install -y nfs-common
 
-  # Creo punto di mount
-  sudo mkdir -p $(realpath $WORK_DIR/$NFS_MOUNT)
+  # Crea punto di mount
+  sudo mkdir -p $(realpath $WORK_DIR/$NFS_DIR)
 
-  # Verifico se la condivisione è già montata
-  if ! mountpoint -q $(realpath $WORK_DIR/$NFS_MOUNT); then
-    sudo mount -t nfs "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" "$(realpath $WORK_DIR/$NFS_MOUNT)" #monto il filesystem
+  # Verifica se la condivisione è già montata
+  if ! mountpoint -q $(realpath $WORK_DIR/$NFS_DIR); then
+    sudo mount -t nfs "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" "$(realpath $WORK_DIR/$NFS_DIR)" #monto il filesystem
     
-    #Persistenza del file system dopo i reboot
-
-    # Riga da inserire in /etc/fstab
-    FSTAB_ENTRY="rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)   $(realpath $WORK_DIR/$NFS_MOUNT)   nfs   rw,_netdev,noatime,x-systemd.automount,x-systemd.idle-timeout=60   0  0"
+    #Persistenza del file system dopo i reboot inserendo una entry in /etc/fstab
+    FSTAB_ENTRY="rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)   $(realpath $WORK_DIR/$NFS_DIR)   nfs   rw,_netdev,noatime,x-systemd.automount,x-systemd.idle-timeout=60   0  0"
 
     # Controlla se la riga esiste già
     if ! grep -q "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" /etc/fstab; then
@@ -97,7 +88,7 @@ setup_nfs_client() {
     sudo systemctl restart remote-fs.target || sudo mount -a
     
   else
-    echo "[INFO] NFS già montato in $NFS_MOUNT"
+    echo "[INFO] NFS già montato in $NFS_DIR"
   fi
 }
 

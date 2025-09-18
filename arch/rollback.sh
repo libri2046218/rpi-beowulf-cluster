@@ -1,20 +1,12 @@
 #!/bin/bash
 set -e
 
-# Lista nodi (modifica se serve)
+source cluster.env # Include le variabili salvate nel file di configurazione
+
+# Utente che esegue lo script
 USER=$(whoami)
-HOSTS_FILE="cluster_hosts.txt"
 
-readarray -t MASTER < <(awk '/\[master\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
-readarray -t NODES < <(awk '/\[nodes\]/{f=1; next} /\[/{f=0} f' "$HOSTS_FILE")
-
-MPI_HOSTFILE="mpi_hostfile"
-NFS_DIR="nfs_shared"
-NFS_MOUNT="nfs_shared"
-WORK_DIR=$2
-
-
-# Rimuove i pacchetti installati (MPI e NFS)
+# Rimuove i pacchetti installati
 remove_dependencies() {
   echo "[INFO] Rimuovo pacchetti installati..."
   sudo apt purge -y openmpi-bin openmpi-common libopenmpi-dev
@@ -50,7 +42,7 @@ remove_ssh_keys_from_nodes() {
 }
 
 
-# Rimuove il file hostfile MPI
+# Rimuove il file MPI_HOSTFILE
 remove_mpi_hostfile() {
   echo "[INFO] Rimuovo file $MPI_HOSTFILE..."
   rm -f $MPI_HOSTFILE
@@ -80,12 +72,10 @@ remove_nfs_client() {
   echo "[INFO] Rimuovo configurazione client NFS..."
 
   # Smonta se montato
-  if mountpoint -q $(realpath $WORK_DIR/$NFS_MOUNT); then
-    sudo umount $(realpath $WORK_DIR/$NFS_MOUNT)
+  if mountpoint -q $(realpath $WORK_DIR/$NFS_DIR); then
+    sudo umount $(realpath $WORK_DIR/$NFS_DIR)
 
-    #Rimuovo persistenza del file system
-
-    # Rimuove la riga corrispondente da /etc/fstab
+    #Rimuove persistenza del file system cancellando la riga corrispondente da /etc/fstab
     if grep -q "rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)" /etc/fstab; then
         echo "Rimuovo mount persistente da /etc/fstab..."
         sudo sed -i "\|rpi-cluster-one:$(realpath $WORK_DIR/$NFS_DIR)|d" /etc/fstab
@@ -99,7 +89,7 @@ remove_nfs_client() {
 
   fi
 
-  sudo rm -rf $(realpath $WORK_DIR/$NFS_MOUNT)
+  sudo rm -rf $(realpath $WORK_DIR/$NFS_DIR)
   sudo apt purge -y nfs-common
 }
 
