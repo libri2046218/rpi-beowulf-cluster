@@ -52,8 +52,8 @@ remove_ssh_keys_from_nodes() {
 
 # Rimuove il file hostfile MPI
 remove_mpi_hostfile() {
-  echo "[INFO] Rimuovo file hostfile MPI..."
-  [ -f $HOSTFILE ] && rm -f $HOSTFILE
+  echo "[INFO] Rimuovo file $MPI_HOSTFILE..."
+  rm -f $MPI_HOSTFILE
 }
 
 # Rimuove configurazione server NFS (solo master)

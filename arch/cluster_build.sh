@@ -17,6 +17,12 @@ copy_scripts() {
   scp "$SCRIPT_DIR/$SETUP_FILE" "$SCRIPT_DIR/$ROLLBACK_FILE" "$SCRIPT_DIR/$HOSTS_FILE" "$node:$WORK_DIR"
 }
 
+remove_scripts() {
+  local node=$1
+  echo "[INFO] Rimuovo script su $node..."
+  ssh "$node" "rm -f $WORK_DIR/$SETUP_FILE $WORK_DIR/$ROLLBACK_FILE $WORK_DIR/$HOSTS_FILE" 
+}
+
 run_script() {
   local node=$1
   local role=$2
@@ -66,9 +72,16 @@ case "$1" in
     done
     wait
 
+    for node in "${NODES[@]}"; do
+      remove_scripts "$node" &
+    done
+    wait
+
     # Step 2: Copia ed esegue rollback sul master
     copy_scripts "$MASTER"
     run_script "$MASTER" master rollback
+
+    remove_scripts "$MASTER"
 
     echo "[INFO] Rollback completato su tutti i nodi."
     ;;
