@@ -37,18 +37,6 @@ void array_random(int* arr, int n) {
     
 }
 
-void array_reduce(int* arr, int n) {
-    int j = 0; 
-    for (int i = 0; i < n; i++) {
-        if (i % 2 == 1) {
-            arr[j] = arr[i] + arr[i - 1];
-            j++;
-        } else if (i % 2 == 0 && i + 1 == n) {
-            arr[j] = arr[i];
-        }
-    }
-}
-
 /*
 returns 0 if the array is not sorted
 return 1 if it is sorted

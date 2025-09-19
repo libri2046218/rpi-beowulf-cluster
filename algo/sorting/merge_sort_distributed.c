@@ -4,47 +4,27 @@
 #include "merge_sort.h"
 #include "array.h"
 
-// Funzione wrapper per leggere l'array da ordinare
-// in questo caso l'array viene generato casualmente a tempo di esecuzione
-void read_input(int* out, int n) {
-    array_random(out, n);
+void array_reduce(int* arr, int n) {
+    int j = 0; 
+    for (int i = 0; i < n; i++) {
+        if (i % 2 == 1) {
+            arr[j] = arr[i] + arr[i - 1];
+            j++;
+        } else if (i % 2 == 0 && i + 1 == n) {
+            arr[j] = arr[i];
+        }
+    }
 }
 
-int main(int argc, char* argv[]) {
-
-    // La dimensione dell'array viene letta in input
-    int n = atoi(argv[1]); 
+// Può essere chiamata solo dopo che è stato già chiamato MPI_Init(.)
+void merge_sort_distributed(int** arrPtr, int n) {
+    int* arr = *arrPtr;
 
     int comm_sz;
     int my_rank;
-
-    MPI_Init(NULL, NULL);
-    MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-    /**
-    // Ottieni il nome del processore
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
-    int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
-
-    // Stampa messaggio da ogni processo
-    printf("Hello from processor %s, rank %d out of %d processors\n",
-           processor_name, my_rank, comm_sz);
-    */
-
-    int* arr = NULL;
-
-    // Il processo 0 alloca memoria e legge un array di lunghezza n
-    if (my_rank == 0) {
-        arr = (int*)malloc(n * sizeof(int));
-        read_input(arr, n);
-    }
-
-    // Qui incomincia la procedura di sorting, si inizia a prendere il tempo
-    double start, finish;
-    MPI_Barrier(MPI_COMM_WORLD); // Sincronizzo i processi
-    start = MPI_Wtime();
+    
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_sz); // Salva il numero di processi all'interno del communicator in comm_sz
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); // Salva il rank del processo in my_rank
 
     // Distribuzione equa del carico
     int local_n[comm_sz];
@@ -72,21 +52,8 @@ int main(int argc, char* argv[]) {
     // con numero di elementi definito da local_n
     MPI_Scatterv(arr, local_n, displs, MPI_INT, local_arr, local_n[my_rank], MPI_INT, 0, MPI_COMM_WORLD);
 
-
-    // Il processo 0 libera la memoria del vettore di input
-    if(my_rank == 0) {
-        free(arr);
-    }
-
-    //printf("Process %d: ", my_rank);
-    //array_print(local_arr, local_n[my_rank]);
-
     // Il vettore locale viene ordinato 
     merge_sort(local_arr, 0, local_n[my_rank] - 1);
-
-    //printf("Process %d: ", my_rank);
-    //array_print(local_arr, local_n[my_rank]);
-
 
     // Inizializzazione di variabili ausiliarie per il cambio di comunicatore
     int new_comm_sz = comm_sz;
@@ -95,8 +62,6 @@ int main(int argc, char* argv[]) {
     MPI_Comm new_comm = MPI_COMM_WORLD;
     
     while(new_comm_sz > 1) {
-
-        //MPI_Barrier(new_comm);
 
         // I processi con rank dispari inviano il loro vettore locale
         if (new_rank % 2 == 1) {
@@ -118,8 +83,6 @@ int main(int argc, char* argv[]) {
             array_copy(local_arr, new_local_arr + local_n[new_rank + 1], local_n[new_rank]);
 
             merge(new_local_arr, 0, local_n[new_rank + 1] - 1, local_n[new_rank] + local_n[new_rank + 1] - 1);
-
-            //array_print(new_local_arr, local_n[new_rank] + local_n[new_rank + 1]);
 
             //Deallocazione della memoria non più utilizzata
             free(local_arr);
@@ -151,23 +114,5 @@ int main(int argc, char* argv[]) {
         MPI_Comm_size(new_comm, &new_comm_sz);
     }
 
-    // Qui finisce la procedura di sorting, si finisce di prendere il tempo
-    finish = MPI_Wtime();
-
-    double elapsed = finish - start;
-
-    if(my_rank == 0) printf("Elapsed time: %f \n", elapsed);
-
-    // L'ultimo processo verifica la correttezza
-    if (new_rank == 0) {
-        int check = array_check_sorting(local_arr, n);
-        printf("Check: %d\n", check);
-    }
-
-    free(local_arr);
-
-    MPI_Finalize();
-
-    return 0;
-
+    if(my_rank == 0) *arrPtr = local_arr;
 }

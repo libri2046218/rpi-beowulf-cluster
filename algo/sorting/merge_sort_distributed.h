@@ -1,0 +1,1 @@
+void merge_sort_distributed(int** arrPtr, int n);

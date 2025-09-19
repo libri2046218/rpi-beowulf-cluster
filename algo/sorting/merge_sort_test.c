@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
     double elapsed = sec_elapsed + nsec_elapsed * 0.000000001;
 
-    printf("Elapsed time %f\n", elapsed);
+    printf("Elapsed time: %f\n", elapsed);
     
     return 0;
 }
