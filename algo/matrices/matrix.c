@@ -87,3 +87,16 @@ void matrix_empty(Matrix* out) {
 	}
 }
 
+void matrix_copy(Matrix* in, Matrix* out) {
+	int n = out->n;
+	int aux;
+	
+	for(int i = 0; i < n; i++) {
+		for(int j = 0; j < n; j++) {
+			matrix_get(in, i, j, &aux);
+			matrix_set(out, i, j, aux);
+		}
+	}
+	
+}
+

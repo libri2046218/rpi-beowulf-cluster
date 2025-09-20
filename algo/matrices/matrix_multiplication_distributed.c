@@ -5,43 +5,14 @@
 #include "matrix.h"
 #include "array.h"
 
-void read_input(Matrix* out){
-    matrix_random(out);
-}
 
-int main(int argc, char* argv[]){
-
-    srand(time(NULL));
-
-    // Dimensione della matrice letta in input
-    int n = atoi(argv[1]);
+void matrix_multiplication_distributed(Matrix* A, Matrix* B, Matrix* C, int n) {
 
     int comm_sz;
     int my_rank;
 
-    MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-    Matrix* A;
-    Matrix* B;
-
-    // Il processo 0 alloca memoria e legge le due matrici da moltiplicare
-    if(my_rank == 0) {
-        A = matrix_alloc(n);
-        read_input(A);
-
-        B = matrix_alloc(n);
-        read_input(B);
-
-        //matrix_print(A);
-        //matrix_print(B);
-    }
-
-    // Qui incomincia la procedura, si inizia a prendere il tempo
-    double start, finish;
-    MPI_Barrier(MPI_COMM_WORLD); // Sincronizzo i processi
-    start = MPI_Wtime();
 
     // Distribuzione equa del carico
     int local_n[comm_sz];
@@ -74,15 +45,21 @@ int main(int argc, char* argv[]){
         local_b_rows[i] = local_b_buf + n * i;
     }
 
+    Matrix* tras_A;
+
     // L'obiettivo è che ogni nodo calcoli il prodotto tra una (o più) colonna di A con una riga di B
     // formando una matrice n * n, trasponiamo la matrice A così che i valori delle colonne di A siano
     // salvati in memoria in modo contiguo
-    if (my_rank == 0) matrix_transpose(A);
+    if (my_rank == 0) {
+        tras_A = matrix_alloc(n);
+        matrix_copy(A, tras_A);
+        matrix_transpose(tras_A);
+    }
 
     // Il processo 0 invia i vettori che rappresentano le matrici (righe collocate in modo contiguo) agli altri processi
     // che ricevono una o più righe della stessa matrice 
     if(my_rank == 0){
-        MPI_Scatterv(A->M, local_n, displs, MPI_INT, local_a_buf, local_n[my_rank], MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Scatterv(tras_A->M, local_n, displs, MPI_INT, local_a_buf, local_n[my_rank], MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Scatterv(B->M, local_n, displs, MPI_INT, local_b_buf, local_n[my_rank], MPI_INT, 0, MPI_COMM_WORLD);
     } else {
         MPI_Scatterv(NULL, NULL, NULL, NULL, local_a_buf, local_n[my_rank], MPI_INT, 0, MPI_COMM_WORLD);
@@ -105,30 +82,9 @@ int main(int argc, char* argv[]){
             }
         }
     }
-
-    //matrix_print(sub_C);
     
-    Matrix* C;
-    // Il processo 0 alloca memoria per la matrice risultato
-    if(my_rank == 0) C = matrix_alloc(n);
-
     // Ogni processo invia la sua matrice (sottoforma di array n*n) e viene effettuata
     // la somma per riduzione 
     if(my_rank == 0) MPI_Reduce(sub_C->M, C->M, n * n, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     else MPI_Reduce(sub_C->M, NULL, n * n, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
-    // Qui finisce la procedura, si finisce di prendere il tempo
-    finish = MPI_Wtime();
-
-    //if(my_rank == 0) matrix_print(C);
-
-    double elapsed = finish - start;
-
-    if(my_rank == 0) printf("Elapsed time: %f \n", elapsed);
-    
-    MPI_Finalize();
-    if(my_rank == 0) {
-        matrix_free(A);
-        matrix_free(B);
-    }
 }

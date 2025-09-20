@@ -20,3 +20,5 @@ void matrix_transpose(Matrix* mat);
 void matrix_random(Matrix* out);
 
 void matrix_empty(Matrix* out);
+
+void matrix_copy(Matrix* in, Matrix* out);
