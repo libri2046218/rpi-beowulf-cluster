@@ -5,6 +5,7 @@
 #include "matrix.h"
 #include "array.h"
 #include "matrix_multiplication_distributed.h"
+#include "mpi_hello.h"
 
 void read_input(Matrix* out){
     matrix_random(out);
@@ -23,6 +24,8 @@ int main(int argc, char* argv[]){
     MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+    mpi_hello();
 
     Matrix* A;
     Matrix* B;

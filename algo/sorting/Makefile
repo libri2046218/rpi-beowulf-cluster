@@ -8,13 +8,13 @@ build-serial: merge_sort_serial_test
 
 build-distributed: merge_sort_distributed_test
 
-merge_sort_distributed_test: merge_sort_distributed_test.o merge_sort_distributed.o merge_sort.o array.o
-	$(CCDIS) $(CFLAGS) -o merge_sort_distributed_test merge_sort_distributed_test.o merge_sort_distributed.o merge_sort.o array.o
+merge_sort_distributed_test: merge_sort_distributed_test.o merge_sort_distributed.o merge_sort.o array.o mpi_hello.o
+	$(CCDIS) $(CFLAGS) -o merge_sort_distributed_test merge_sort_distributed_test.o merge_sort_distributed.o merge_sort.o array.o mpi_hello.o
 
 merge_sort_serial_test: merge_sort_serial_test.o merge_sort.o array.o 
 	$(CCSEQ) $(CFLAGS) -o merge_sort_serial_test merge_sort_serial_test.o merge_sort.o array.o
 
-merge_sort_distributed_test.o: merge_sort_distributed_test.c merge_sort_distributed.h merge_sort.h array.h
+merge_sort_distributed_test.o: merge_sort_distributed_test.c merge_sort_distributed.h merge_sort.h array.h mpi_hello.h
 	$(CCDIS) $(CFLAGS) -c merge_sort_distributed_test.c -o merge_sort_distributed_test.o
 
 merge_sort_serial_test.o: merge_sort_serial_test.c merge_sort.h array.h
@@ -28,6 +28,9 @@ merge_sort.o: merge_sort.c merge_sort.h
 
 array.o: array.c array.h 
 	$(CCSEQ) $(CFLAGS) -c array.c -o array.o 
+
+mpi_hello.o: mpi_hello.c mpi_hello.h 
+	$(CCDIS) $(CFLAGS) -c mpi_hello.c -o mpi_hello.o 
 
 .PHONY: all clean
 clean:

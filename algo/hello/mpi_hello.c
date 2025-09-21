@@ -1,9 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
 
-int main(int argc, char** argv) {
-    // Inizializza l'ambiente MPI
-    MPI_Init(&argc, &argv);
+void mpi_hello() {
 
     // Ottieni il numero totale di processi
     int world_size;
@@ -22,7 +20,5 @@ int main(int argc, char** argv) {
     printf("Hello from processor %s, rank %d out of %d processors\n",
            processor_name, world_rank, world_size);
 
-    // Finalizza l'ambiente MPI
-    MPI_Finalize();
-    return 0;
 }
+

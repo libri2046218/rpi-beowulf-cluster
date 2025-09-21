@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include "array.h"
 #include "merge_sort_distributed.h"
+#include "mpi_hello.h"
 
 // Funzione wrapper per leggere l'array da ordinare
 // in questo caso l'array viene generato casualmente a tempo di esecuzione
@@ -19,6 +20,8 @@ int main(int argc, char* argv[]) {
 
     int my_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+    mpi_hello();
 
     int* arr = NULL;
 
