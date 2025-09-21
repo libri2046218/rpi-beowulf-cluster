@@ -1,3 +1,6 @@
+#ifndef MATRIX_H
+#define MATRIX_H
+
 typedef struct {
 
 	int* M;
@@ -22,3 +25,5 @@ void matrix_random(Matrix* out);
 void matrix_empty(Matrix* out);
 
 void matrix_copy(Matrix* in, Matrix* out);
+
+#endif
