@@ -53,12 +53,6 @@ int main(int argc, char* argv[]){
     double elapsed = finish - start;
 
     if(my_rank == 0) printf("Elapsed time: %f \n", elapsed);
-
-    if(my_rank == 0){
-        matrix_print(A);
-        matrix_print(B);
-        matrix_print(C);
-    }
     
     MPI_Finalize();
     if(my_rank == 0) {

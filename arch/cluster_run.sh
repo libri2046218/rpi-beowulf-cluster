@@ -5,7 +5,7 @@ source cluster.env # Include le variabili salvate nel file di configurazione
 
 # Verifica che sono presenti tutti gli argomenti necessari
 if [ $# -lt 4 ]; then
-  echo "Usage: $0 <binary_name> <folder> [--all-cores | --one-core ] -- [args for <binary_name>]"
+  echo "Usage: $0 <binary_name> <folder> [--all-cores | --one-core | --serial] -- [args for <binary_name>]"
   exit 1
 fi
 
@@ -25,6 +25,9 @@ case "$OPTION" in
         ;;
     --one-core)
         CORE_MODE="ONE"
+        ;;
+    --serial)
+        CORE_MODE="SERIAL"
         ;;
     *)
         echo "Errore: opzione non valida $4"
@@ -56,7 +59,15 @@ copy_script() {
 # Compila gli script attraverso il Makefile nella cartella
 compile_script() {
   echo "[INFO] Compiling with make on $MASTER..."
-  ssh "$MASTER" "cd $REMOTE_PROGRAM_FOLDER && make"
+  if [ "$CORE_MODE" = "ALL" ]; then
+    ssh "$MASTER" "cd $REMOTE_PROGRAM_FOLDER && make build-distributed"
+  
+  elif [ "$CORE_MODE" = "ONE" ]; then 
+    ssh "$MASTER" "cd $REMOTE_PROGRAM_FOLDER && make build-distributed"
+  
+  elif [ "$CORE_MODE" = "SERIAL" ]; then 
+    ssh "$MASTER" "cd $REMOTE_PROGRAM_FOLDER && make build-serial"
+  fi
 }
 
 # Esegue il programma
@@ -68,6 +79,10 @@ run_script() {
   
   elif [ "$CORE_MODE" = "ONE" ]; then
     ssh "$MASTER" "mpirun -tag-output -np $NUM_NODES --map-by ppr:1:node --hostfile $WORK_DIR/$MPI_HOSTFILE $REMOTE_PROGRAM_FOLDER/$BINARY_NAME ${PROGRAM_ARGS[@]} "
+  
+  elif [ "$CORE_MODE" = "SERIAL" ]; then 
+    ssh "$MASTER" "$REMOTE_PROGRAM_FOLDER/$BINARY_NAME ${PROGRAM_ARGS[@]}"
+
   fi
 }
 
